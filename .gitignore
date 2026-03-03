@@ -1,0 +1,10 @@
+# Credentials - never commit
+config.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# archives
+archive/
+archive/*
