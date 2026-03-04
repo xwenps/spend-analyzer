@@ -40,23 +40,63 @@ You must enable API access to Google Sheets, create an OAuth2 Client ID and set 
 1. In APIs & Services → Credentials, also create an OAuth 2.0 Client ID (type: Web application)
 2. Add `http://localhost` (or alternative hosted origin ie. ` https://xwenps.github.io`) to Authorized JavaScript origins
 3. You'll use the `Client ID` to connect
+4. You should get the Data Access to allow only for Reads to Spreadsheets: `.../auth/spreadsheets.readonly`
 
-## How to use
+## How to Run
 
 ### Github Hosted Page
 
-Link: https://xwenps.github.io/spend-analyzer/
+Access directly hosted on: https://xwenps.github.io/spend-analyzer/
 
-1) 
+> **Note:** This is a static webpage. All code is run locally
+> on your browser and no interaction is made with any backend
+> server besides your reads from your google sheet.
+
 
 ### Local Run
 ```
-cd your-folder
+cd <your-folder>
 python3 -m http.server 8080
 ```
 
-open http://localhost:8080 in your browser
+Open http://localhost:8080 in your browser
 
 ### Data Processor
 
-Data processor takes CSV exports from various financial institutes and transforms the raw data into the standard schema expected by the Spend Analyzer
+Data processor takes CSV exports from various financial institutes and transforms the raw data into the standard schema expected by the Spend Analyzer. This data processor currently supports the following banks and cards:
+
+| Institution      | Account Type              | CSV Format Notes                                                                             |
+| ---------------- | ------------------------- | -------------------------------------------------------------------------------------------- |
+| Capital One      | Credit Card               |                                 |
+| Chase            | Bank / Checking Account   |                                          |
+| Chase            | Credit Card               |  |
+| American Express | Credit Card               |  |
+| Citi             | CustomCash Card           |                                                                          |
+| Citi             | Costco Anywhere Visa Card | Costco Partner card has different format than standard Citi cards                                   |
+
+#### Bank Auto-Detection Fingerprints
+
+Auto-detection reads only the CSV header row and matches against unique column
+combinations. Order matters — more specific rules are evaluated first.
+
+| Priority | Bank | Unique Signal | Rationale |
+|---|---|---|---|
+| 1 | Capital One (Credit Card) | `posted date` + `card no.` | No other supported bank exports a `card no.` column |
+| 2 | Chase (Bank Account) | `posting date` + `balance` | Only the checking account export includes a running `balance` column |
+| 3 | Chase (Credit Card) | `post date` + `memo` | Credit card export adds a `memo` field absent from the bank account export |
+| 4 | Citi (Costco Anywhere) | `member name` | Completely unique to Costco Anywhere's member tracking; checked before CustomCash to avoid subset collision |
+| 5 | Citi (CustomCash) | `status` + `debit` + `credit` | Combination of all three narrows to Citi after Costco Anywhere is already ruled out |
+| 6 | American Express | `date` + `amount` + no `debit`/`balance` + ≤ 5 columns | Amex exports only 3 columns — the sparsest format of all supported banks |
+
+> **Note:** If a new bank shares common column names (`date`, `amount`,
+> `description`) with an existing adapter and has no uniquely named column,
+> auto-detection will return `null` and the user must select the bank manually.
+> Auto-detection is a convenience only — manual selection always takes precedence.
+
+### First Time User Set Up With Source Schema
+
+For first-time users:
+1. Export CSVs from all financial institutions, and process all files through the data processor - multi-file is supported.
+2. Copy and paste full result into a Google Sheet with the headers
+3. Categorize transactions as you please
+4. Retrieve Sheets ID, Client ID and use in the Spend Analyzer
