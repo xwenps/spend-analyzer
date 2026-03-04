@@ -1,3 +1,5 @@
+![Transaction Processor demo](./assets/demo.gif)
+
 ## Config
 
 If hosting locally, you can store the Google Client ID and Sheet ID for autofilling within a `config.json`
