@@ -46,17 +46,32 @@
     #drop-zone p { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
 
     /* ── FILE QUEUE ── */
-    .file-queue { display: flex; flex-direction: column; gap: 10px; }
+    .file-queue { display: flex; flex-direction: column; gap: 10px; } /* overflow-x: auto; /* prevent rows from forcing page width */ }
+    .fq-row { overflow-x: auto; }
     .fq-empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
     .fq-row {
       display: flex; align-items: center; gap: 10px; padding: 12px 14px;
       background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);
-      flex-wrap: wrap;
+      /* keep everything on a single line so the remove button never drops
+         and spacing stays predictable regardless of container width */
+      flex-wrap: nowrap;
     }
-    .fq-name { flex: 1; min-width: 140px; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fq-name {
+      /* occupy remaining space but can shrink to zero; width capped so
+         truncation happens at the same point regardless of other content */
+      flex: 1 1 0;           /* grow/shrink with the row */
+      min-width: 0;          /* allow it to collapse for scrolling */
+      max-width: 250px;      /* prevent insanely long names from pushing
+                                 everything else */
+      font-size: 0.88rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
     .fq-badge {
       font-size: 0.75rem; color: var(--green); background: #4caf9118;
-      border: 1px solid #4caf9140; border-radius: 20px; padding: 3px 10px; white-space: nowrap;
+      border: 1px solid #4caf9140; border-radius: 20px; padding: 3px 10px;
+      /* fixed width pill so all badges align uniformly */
+      display: inline-block; flex: 0 0 140px; max-width: 140px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .fq-badge.unknown { color: var(--red); background: #e05c5c18; border-color: #e05c5c40; }
 
@@ -70,7 +85,8 @@
       appearance: none; -webkit-appearance: none;
       background: var(--surface); border: 1px solid var(--border); color: var(--text);
       padding: 7px 30px 7px 12px; border-radius: 8px; font-size: 0.82rem;
-      outline: none; cursor: pointer; min-width: 200px;
+      outline: none; cursor: pointer;
+      flex: 0 0 200px;        /* fixed select width */
       font-family: inherit;
     }
     .fq-select:focus { border-color: var(--accent); }
@@ -85,14 +101,41 @@
     .fq-input:focus { border-color: var(--accent); }
     .fq-input:hover { border-color: var(--muted); }
     .fq-input::placeholder { color: var(--muted); }
-    .fq-field { display: flex; flex-direction: column; gap: 3px; }
+    .fq-field { display: flex; flex-direction: column; gap: 3px;
+      flex: 0 0 150px; /* fixed field width for uniform rows */
+    }
     .fq-field-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .fq-remove {
       cursor: pointer; color: var(--muted); background: none; border: none;
-      font-size: 1rem; padding: 4px 8px; border-radius: 4px; line-height: 1; margin-left: auto;
+      font-size: 1rem; padding: 4px 8px; border-radius: 4px; line-height: 1;
+      margin-left: auto; flex-shrink: 0; /* keep button visible and at end */
     }
     .fq-remove:hover { color: var(--red); }
+
+    .autocomplete-wrapper { position: relative; flex: 0 0 150px; }
+    .autocomplete-list {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 500;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: 0 4px 16px #00000055;
+    }
+    .autocomplete-list.open { display: block; }
+    .autocomplete-item {
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .autocomplete-item:hover { background: var(--surface2); }
 
     /* ── BUTTONS ── */
     .btn { padding: 9px 20px; border-radius: 8px; border: none; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
@@ -139,6 +182,26 @@
     /* ── TOAST ── */
     #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: 9px; font-size: 0.85rem; box-shadow: 0 8px 24px #00000066; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 999; }
     #toast.show { opacity: 1; }
+
+    /* modal overlay for account config import */
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+      visibility: hidden; opacity: 0; transition: opacity 0.2s;
+      z-index: 1000;
+    }
+    .modal.show { visibility: visible; opacity: 1; }
+    .modal-content {
+      background: var(--surface); padding: 20px; border-radius: 10px;
+      width: 90%; max-width: 500px;
+    }
+    .modal-content textarea {
+      width: 100%; resize: vertical; background: var(--surface2);
+      color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px;
+      font-family: inherit; font-size: 0.9rem;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
     /* ── DATE RANGE PILL ── */
     .date-range-pill {
@@ -194,6 +257,10 @@
           <button class="date-range-clear" id="date-range-clear" title="Clear dates">&#x2715;</button>
         </div>
       </div>
+      <div class="field-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-secondary" id="accounts-config-btn" style="flex: 1; line-height: 1;">&#x2699;&#xFE0F; Config</button>
+      </div>
     </div>
   </div>
 
@@ -247,6 +314,24 @@
   </div>
 
 </main>
+
+<!-- configuration import modal -->
+<div id="config-modal" class="modal">
+  <div class="modal-content">
+    <h3>Import Configuration</h3>
+    <textarea id="config-text" placeholder="Paste JSON here" rows="10" style="margin-top: 12px;"></textarea>
+    <div style="margin-top:8px; font-size:0.85rem;">
+      or <button class="btn btn-secondary btn-sm" id="config-file-btn">Choose file</button>
+      <input type="file" id="config-file-input" accept=".json" style="display:none" />
+    </div>
+    <div id="config-error" class="parse-error" style="margin-top:8px; display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="config-load-btn">Load</button>
+      <button class="btn btn-secondary" id="config-cancel-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
 const ADAPTERS = {
@@ -501,6 +586,41 @@ document.getElementById('date-range-clear').addEventListener('click', () => {
 // ─── FILE QUEUE ───────────────────────────────────────────────────────────────
 let fileQueue = [];
 
+// account configuration imported by user
+let accountOptions = [];
+
+function loadAccountConfigObject(obj) {
+  try {
+    if (!obj || !obj.options || !Array.isArray(obj.options.accounts))
+      throw new Error('JSON must contain options.accounts array');
+    accountOptions = obj.options.accounts.map(a => ({
+      name: a.name || '', owner: a.owner || '', type: a.type || '', description: a.description || ''
+    })).filter(a => a.name);
+    // if there are any rows already in the queue, auto-fill matching owners
+    fileQueue.forEach(f => {
+      const m = accountOptions.find(a => a.name === f.account);
+      if (m) f.owner = m.owner;
+    });
+    renderQueue();
+    showToast('Account configuration loaded');
+  } catch (e) {
+    showError(document.getElementById('config-error'), e.message);
+  }
+}
+
+function showConfigModal(show = true) {
+  const m = document.getElementById('config-modal');
+  if (!m) return;
+  if (show) {
+    document.getElementById('config-text').value = '';
+    document.getElementById('config-error').style.display = 'none';
+    m.classList.add('show');
+  } else {
+    m.classList.remove('show');
+  }
+}
+
+
 function bankOptionsHTML(selectedKey) {
   return '<option value="">\u2014 Select bank \u2014</option>' +
     Object.entries(ADAPTERS).map(([k,v]) =>
@@ -520,18 +640,16 @@ function renderQueue() {
       <div class="fq-select-wrap">
         <select class="fq-select" data-id="${f.id}" data-field="bank">${bankOptionsHTML(f.bank)}</select>
       </div>
-      <div class="fq-field">
-        <!-- <span class="fq-field-label">Account Name</span> -->
-        <input class="fq-input" data-id="${f.id}" data-field="account"
-               placeholder="Account Name eg. Citi123" value="${esc(f.account)}" />
+      <div class="fq-field autocomplete-wrapper">
+        <input class="fq-input ac-input" data-id="${f.id}" data-field="account" data-ac="account" placeholder="Account Name" value="${esc(f.account)}" autocomplete="off">
+        <div class="autocomplete-list" data-ac-list="account-${f.id}"></div>
       </div>
-      <div class="fq-field">
-        <!-- <span class="fq-field-label">Owner</span> -->
-        <input class="fq-input" data-id="${f.id}" data-field="owner"
-               placeholder=" Account Owner eg. John" value="${esc(f.owner)}" />
+      <div class="fq-field autocomplete-wrapper">
+        <input class="fq-input ac-input" data-id="${f.id}" data-field="owner" data-ac="owner" placeholder="Account Owner" value="${esc(f.owner)}" autocomplete="off">
+        <div class="autocomplete-list" data-ac-list="owner-${f.id}"></div>
       </div>
-      <button class="fq-remove" data-id="${f.id}" title="Remove">\u2715</button>
-    </div>
+        <button class="fq-remove" data-id="${f.id}" title="Remove">\u2715</button>
+      </div>
   `).join('');
 
   el.querySelectorAll('.fq-select').forEach(sel => {
@@ -544,7 +662,16 @@ function renderQueue() {
   el.querySelectorAll('.fq-input').forEach(inp => {
     inp.addEventListener('input', e => {
       const item = fileQueue.find(f => f.id === e.target.dataset.id);
-      if (item) item[e.target.dataset.field] = e.target.value;
+      if (item) {
+        item[e.target.dataset.field] = e.target.value;
+        if (e.target.dataset.field === 'account') {
+          const match = accountOptions.find(a => a.name === e.target.value);
+          if (match) {
+            item.owner = match.owner;
+            renderQueue();
+          }
+        }
+      }
     });
   });
 
@@ -552,6 +679,52 @@ function renderQueue() {
     btn.addEventListener('click', e => {
       fileQueue = fileQueue.filter(f => f.id !== e.target.dataset.id);
       renderQueue();
+    });
+  });
+
+  initAutoComplete();
+}
+
+function initAutoComplete() {
+  document.querySelectorAll('.ac-input').forEach(input => {
+    const listEl = input.parentElement.querySelector('.autocomplete-list');
+    const type = input.dataset.ac; // "account" or "owner"
+
+    function getSuggestions() {
+      return type === 'account'
+        ? accountOptions.map(a => a.name).filter(Boolean).sort()
+        : [...new Set(accountOptions.map(a => a.owner).filter(Boolean))].sort();
+    }
+
+    function showList(items) {
+      listEl.innerHTML = items.map(v =>
+        `<div class="autocomplete-item">${esc(v)}</div>`
+      ).join('');
+      listEl.classList.toggle('open', items.length > 0);
+      listEl.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('mousedown', e => {
+          e.preventDefault(); // prevent blur before click
+          input.value = item.textContent;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          listEl.classList.remove('open');
+        });
+      });
+    }
+
+    input.addEventListener('focus', () => {
+      const q = input.value.toLowerCase();
+      const matches = getSuggestions().filter(v => v.toLowerCase().includes(q));
+      showList(matches);
+    });
+
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase();
+      const matches = getSuggestions().filter(v => v.toLowerCase().includes(q));
+      showList(matches);
+    });
+
+    input.addEventListener('blur', () => {
+      setTimeout(() => listEl.classList.remove('open'), 150);
     });
   });
 }
@@ -577,6 +750,44 @@ dropZone.addEventListener('click', () => document.getElementById('file-input').c
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', e => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over'); });
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+
+// account config modal controls
+const cfgBtn = document.getElementById('accounts-config-btn');
+if (cfgBtn) cfgBtn.addEventListener('click', () => showConfigModal(true));
+
+const cfgCancel = document.getElementById('config-cancel-btn');
+if (cfgCancel) cfgCancel.addEventListener('click', () => showConfigModal(false));
+
+const cfgLoad = document.getElementById('config-load-btn');
+if (cfgLoad) cfgLoad.addEventListener('click', () => {
+  try {
+    const obj = JSON.parse(document.getElementById('config-text').value);
+    loadAccountConfigObject(obj);
+    showConfigModal(false);
+  } catch (e) {
+    showError(document.getElementById('config-error'), e.message);
+  }
+});
+
+const cfgFileBtn = document.getElementById('config-file-btn');
+if (cfgFileBtn) cfgFileBtn.addEventListener('click', () => document.getElementById('config-file-input').click());
+
+const cfgFileInput = document.getElementById('config-file-input');
+if (cfgFileInput) cfgFileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const obj = JSON.parse(ev.target.result);
+      loadAccountConfigObject(obj);
+      showConfigModal(false);
+    } catch (err) {
+      showError(document.getElementById('config-error'), err.message);
+    }
+  };
+  reader.readAsText(file);
+});
 
 document.getElementById('file-input').addEventListener('change', e => {
   if (e.target.files.length) handleFiles(e.target.files);
