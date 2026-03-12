@@ -203,6 +203,22 @@
     }
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
+    .config-status-badge {
+      font-size: 0.75rem;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      white-space: nowrap;
+    }
+    .config-status-badge a {
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .config-status-badge a:hover { text-decoration: underline; }
+
     /* ── DATE RANGE PILL ── */
     .date-range-pill {
       display: inline-flex; align-items: center; gap: 0;
@@ -257,9 +273,12 @@
           <button class="date-range-clear" id="date-range-clear" title="Clear dates">&#x2715;</button>
         </div>
       </div>
-      <div class="field-group">
+      <div class="field-group" style="justify-content: stretch;">
         <label>&nbsp;</label>
         <button class="btn btn-secondary" id="accounts-config-btn" style="flex: 1; line-height: 1;">&#x2699;&#xFE0F; Config</button>
+        <div id="config-loaded-status" style="display:none;">
+          <span class="config-status-badge">&#x2713; Loaded <span id="config-account-count"></span> account configs &middot; <a href="#" id="config-view-link">View</a></span>
+        </div>
       </div>
     </div>
   </div>
@@ -587,23 +606,37 @@ document.getElementById('date-range-clear').addEventListener('click', () => {
 let fileQueue = [];
 
 // account configuration imported by user
+let loadedConfigJson = null;
 let accountOptions = [];
 
-function loadAccountConfigObject(obj) {
+function updateConfigBadge() {
+  const statusEl = document.getElementById('config-loaded-status');
+  const countEl  = document.getElementById('config-account-count');
+  if (!statusEl) return;
+  if (accountOptions.length > 0) {
+    countEl.textContent = accountOptions.length;
+    statusEl.style.display = 'block';
+  } else {
+    statusEl.style.display = 'none';
+  }
+}
+
+function loadAccountConfigObject(obj, rawJson) {
   try {
     if (!obj || !obj.options || !Array.isArray(obj.options.accounts))
       throw new Error('JSON must contain options.accounts array');
     accountOptions = obj.options.accounts.map(a => ({
-      name: a.name || '', owner: a.owner || '', type: a.type || '', description: a.description || ''
+      name: a.name, owner: a.owner, type: a.type, description: a.description
     })).filter(a => a.name);
-    // if there are any rows already in the queue, auto-fill matching owners
+    loadedConfigJson = rawJson || JSON.stringify(obj, null, 2);
     fileQueue.forEach(f => {
       const m = accountOptions.find(a => a.name === f.account);
       if (m) f.owner = m.owner;
     });
     renderQueue();
+    updateConfigBadge();
     showToast('Account configuration loaded');
-  } catch (e) {
+  } catch(e) {
     showError(document.getElementById('config-error'), e.message);
   }
 }
@@ -762,7 +795,7 @@ const cfgLoad = document.getElementById('config-load-btn');
 if (cfgLoad) cfgLoad.addEventListener('click', () => {
   try {
     const obj = JSON.parse(document.getElementById('config-text').value);
-    loadAccountConfigObject(obj);
+    loadAccountConfigObject(obj, document.getElementById('config-text').value);;
     showConfigModal(false);
   } catch (e) {
     showError(document.getElementById('config-error'), e.message);
@@ -780,7 +813,7 @@ if (cfgFileInput) cfgFileInput.addEventListener('change', e => {
   reader.onload = ev => {
     try {
       const obj = JSON.parse(ev.target.result);
-      loadAccountConfigObject(obj);
+      loadAccountConfigObject(obj, ev.target.result);
       showConfigModal(false);
     } catch (err) {
       showError(document.getElementById('config-error'), err.message);
@@ -788,6 +821,17 @@ if (cfgFileInput) cfgFileInput.addEventListener('change', e => {
   };
   reader.readAsText(file);
 });
+
+const viewLink = document.getElementById('config-view-link');
+if (viewLink) {
+  viewLink.addEventListener('click', e => {
+    e.preventDefault();
+    showConfigModal(true);
+    if (loadedConfigJson) {
+      document.getElementById('config-text').value = loadedConfigJson;
+    }
+  });
+}
 
 document.getElementById('file-input').addEventListener('change', e => {
   if (e.target.files.length) handleFiles(e.target.files);
