@@ -625,8 +625,7 @@ function applyFiltersAndRender() {
     if (excluded.month.size > 0 && excluded.month.has(String(r.monthNum))) return false;
     if (excluded.owner.size > 0 && excluded.owner.has(r.accountOwner))     return false;
     if (excluded.cat.size   > 0 && excluded.cat.has(r.category))           return false;
-    const q = document.getElementById('search-input').value.toLowerCase();
-    if (q && ![r.description, r.category, r.notes].some(s => (s||'').toLowerCase().includes(q))) return false;
+    
     return true;
   });
   currentPage = 1;
@@ -904,7 +903,13 @@ function tickStyle() { return { color: '#8892b0', font: { size: 11 } }; }
 
 // ─── TABLE ────────────────────────────────────────────────────────────────────
 function renderTable() {
-  let data = [...filteredData].sort((a, b) => {
+  
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const tableData = q
+    ? filteredData.filter(r => [r.description, r.category, r.notes].some(s => s && s.toLowerCase().includes(q)))
+    : filteredData
+  
+  let data = [...tableData].sort((a, b) => {
     let av = sortCol === 'date' ? (a.dateObj || 0) : sortCol === 'amount' ? a.amount : (a[sortCol] || '');
     let bv = sortCol === 'date' ? (b.dateObj || 0) : sortCol === 'amount' ? b.amount : (b[sortCol] || '');
     if (av < bv) return sortDir === 'asc' ? -1 : 1;
@@ -944,7 +949,11 @@ document.querySelectorAll('th[data-col]').forEach(th => {
 
 document.getElementById('prev-btn').addEventListener('click', () => { currentPage--; renderTable(); });
 document.getElementById('next-btn').addEventListener('click', () => { currentPage++; renderTable(); });
-document.getElementById('search-input').addEventListener('input', applyFiltersAndRender);
+
+document.getElementById('search-input').addEventListener('input', () => {
+  currentPage = 1;
+  renderTable();
+});
 
 document.getElementById('refresh-btn').addEventListener('click', () => {
   const sheetId = document.getElementById('sheet-id-input').value.trim();
