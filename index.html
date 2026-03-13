@@ -578,64 +578,73 @@ async function loadAllData(sheetId) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('loading').style.display = 'block';
 
-  // Extend this array when you add new year tabs to your sheet
-  const years = CONFIG.years || ['2023', '2024', '2025', '2026'];
-  let combined = [];
+  const currentYear = new Date().getFullYear();
+  const sheetTabs = CONFIG.sheetTabs || Array.from({ length: currentYear - 2019 }, (_, i) => String(2020 + i));
 
-  for (const year of years) {
-    try {
-      const range = encodeURIComponent(`${year}!A:H`);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (!res.ok) continue;
-      const json = await res.json();
-      const rows = json.values || [];
-      if (rows.length < 2) continue;
+  const results = await Promise.all(
+    sheetTabs.map(async tab => {
+      try {
+        const range = encodeURIComponent(`${tab}!A:H`);
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+        console.log(`Tab "${tab}" → HTTP ${res.status}`);
+        if (!res.ok) return [];
+        const json = await res.json();
+        const rows = json.values;
+        console.log(`Tab "${tab}" → rows:`, rows?.length);
+        if (!rows || rows.length < 2) return [];
 
-      const headers = rows[0].map(h => h.trim().toLowerCase());
-      const idx = {
-        date:         headers.indexOf('date'),
-        description:  headers.indexOf('description'),
-        amount:       headers.indexOf('amount'),
-        account:      headers.indexOf('account'),
-        category:     headers.indexOf('category'),
-        month:        headers.indexOf('month'),
-        accountOwner: headers.indexOf('account owner'),
-        notes:        headers.indexOf('notes'),
-      };
+        const headers = rows[0].map(h => h.trim().toLowerCase());
+        console.log(`Tab "${tab}" → headers:`, headers);
+        const idx = {
+          date:         headers.indexOf('date'),
+          description:  headers.indexOf('description'),
+          amount:       headers.indexOf('amount'),
+          account:      headers.indexOf('account'),
+          category:     headers.indexOf('category'),
+          month:        headers.indexOf('month'),
+          accountOwner: headers.indexOf('account owner'),
+          notes:        headers.indexOf('notes'),
+        };
 
-      for (let i = 1; i < rows.length; i++) {
-        const r = rows[i];
-        const amount = parseFloat((r[idx.amount] || '0').replace(/[$,]/g, ''));
-        if (!r[idx.date] || isNaN(amount) || amount === 0) continue;
-        const parts = r[idx.date].split('/');
-        const dateObj = parts.length === 3
-          ? new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]))
-          : null;
-        combined.push({
-          date:         r[idx.date] || '',
-          dateObj,
-          year:         parseInt(year),
-          monthNum:     dateObj ? dateObj.getMonth() + 1 : null,
-          description:  r[idx.description] || '',
-          amount,
-          account:      idx.account >= 0      ? (r[idx.account] || '')      : '',
-          category:     idx.category >= 0     ? (r[idx.category] || 'Uncategorized') : 'Uncategorized',
-          accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '') : '',
-          notes:        idx.notes >= 0        ? (r[idx.notes] || '')        : '',
+        return rows.slice(1).flatMap(r => {
+          const amount = parseFloat((r[idx.amount] || '0').replace(/[$,]/g, ''));
+          if (!r[idx.date] || isNaN(amount) || amount === 0) return [];
+          const parts = r[idx.date].split('/');
+          const dateObj = parts.length === 3
+            ? new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]))
+            : null;
+          return [{
+            date:         r[idx.date] || '',
+            dateObj,
+            year:         dateObj ? dateObj.getFullYear() : null,
+            monthNum:     dateObj ? dateObj.getMonth() + 1 : null,
+            description:  r[idx.description] || '',
+            amount,
+            account:      idx.account      >= 0 ? (r[idx.account]      || '')               : '',
+            category:     idx.category     >= 0 ? (r[idx.category]     || 'Uncategorized')  : 'Uncategorized',
+            accountOwner: idx.accountOwner >= 0 ? (r[idx.accountOwner] || '')               : '',
+            notes:        idx.notes        >= 0 ? (r[idx.notes]        || '')               : '',
+          }];
         });
-      }
-    } catch (e) {
-      console.warn(`Could not load sheet tab "${year}":`, e);
-    }
-  }
 
-  allData = combined.sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
+      } catch (e) {
+        console.warn(`Could not load sheet tab "${tab}"`, e);
+        return [];
+      }
+    })
+  );
+  console.log('sheetTabs used:', sheetTabs);
+  console.log('results:', results);
+  console.log('allData after flat:', results.flat().length, 'rows');
+
+  allData = results.flat().sort((a, b) => (b.dateObj || 0) - (a.dateObj || 0));
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   populateFilters();
   applyFiltersAndRender();
 }
+
 
 // ─── FILTERS ──────────────────────────────────────────────────────────────────
 function populateFilters() {

@@ -16,6 +16,16 @@ If hosting locally, you can store the Google Client ID and Sheet ID for autofill
   "clientId": "<SOMETHING>.apps.googleusercontent.com",
   "sheetId":  "<SHEET ID>",
   "years":    ["2023", "2024", "2025", "2026"]
+  "options": {
+    "accounts": [
+      {
+        "name": <string>,
+        "owner": <string>,
+        "type": <string>,
+        "description": <string>
+      }
+    ]
+  }
 }
 ```
 ## Pre-Reqs
@@ -35,7 +45,7 @@ This app currently pulls directly from Google Sheets using OAuth2 scopes.
 You must enable API access to Google Sheets, create an OAuth2 Client ID and set restrictions to allow from the proper website URIs.
 
 #### Step 1: Create a Google Cloud Project
-1. Go to console.cloud.google.com
+1. Go to `console.cloud.google.com`
 2. Click the project dropdown at the top → New Project
 3. Name it anything (e.g., "Spend Tracker") and click Create
 4. Make sure the new project is selected in the dropdown
@@ -49,17 +59,17 @@ You must enable API access to Google Sheets, create an OAuth2 Client ID and set 
 1. In APIs & Services → Credentials, also create an OAuth 2.0 Client ID (type: Web application)
 2. Add `http://localhost` (or alternative hosted origin ie. ` https://xwenps.github.io`) to Authorized JavaScript origins
 3. You'll use the `Client ID` to connect
-4. You should get the Data Access to allow only for Reads to Spreadsheets: `.../auth/spreadsheets.readonly`
+4. You should set the Data Access to allow only for Reads to Spreadsheets: `.../auth/spreadsheets.readonly`
 
 ## How to Run
 
 ### Github Hosted Page
 
-Access directly hosted on: https://xwenps.github.io/spend-analyzer/
+Access directly hosted on: https://xwenps.github.io/spend-tracker/
 
 > **Note:** This is a static webpage. All code is run locally
 > on your browser and no interaction is made with any backend
-> server besides your reads from your google sheet.
+> server or external connection besides your reads from your google sheet.
 
 
 ### Local Run
@@ -72,7 +82,7 @@ Open http://localhost:8080 in your browser
 
 ### Data Processor
 
-Data processor takes CSV exports from various financial institutes and transforms the raw data into the standard schema expected by the Spend Analyzer. This data processor currently supports the following banks and cards:
+Data processor takes CSV exports from various financial institutes and transforms the raw data into the standard schema expected by the Spend Tracker. This data processor currently supports the following banks and cards:
 
 | Institution      | Account Type              | CSV Format Notes                                                                             |
 | ---------------- | ------------------------- | -------------------------------------------------------------------------------------------- |
@@ -108,4 +118,4 @@ For first-time users:
 1. Export CSVs from all financial institutions, and process all files through the data processor - multi-file is supported.
 2. Copy and paste full result into a Google Sheet with the headers
 3. Categorize transactions as you please
-4. Retrieve Sheets ID, Client ID and use in the Spend Analyzer
+4. Retrieve Sheets ID, Client ID and use in the Spend Tracker
