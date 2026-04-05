@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BBL</title>
   <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <script>
+    window.ENV = {
+      CLIENT_ID: "${CLIENT_ID}",
+      SHEET_ID_DATA: "${SHEET_ID_DATA}",
+      DOC_ID_CONFIG: "${DOC_ID_CONFIG}"
+    };
+  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./chart.umd.min.js"></script>
   <link rel="stylesheet" href="./styles.css">
@@ -22,7 +29,6 @@
     <nav class="header-nav">
       <a href="./process.html" class="nav-link">&#x1F4C4; Process Transactions</a>
     </nav>
-    <p>Enter your credentials to connect your Google Sheet</p>
   <div id="config-form">
     <div id="env-status">&#x2713; Env variables found &mdash; values pre-filled</div>
     <div id="config-status">&#x2713; config.json found &mdash; values pre-filled</div>
