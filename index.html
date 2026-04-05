@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Spend Tracker</title>
+  <script>
+    window.ENV = {
+      CLIENT_ID: "${CLIENT_ID}",
+      SHEET_ID_DATA: "${SHEET_ID_DATA}",
+      DOC_ID_CONFIG: "${DOC_ID_CONFIG}"
+    };
+  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./chart.umd.min.js"></script>
   <style>
@@ -41,6 +48,7 @@
       transition: opacity 0.2s; width: 100%;
     }
     #signin-btn:hover { opacity: 0.85; }
+    #env-status { font-size: 0.8rem; color: var(--green); display: none; }
     #config-status { font-size: 0.8rem; color: var(--green); display: none; }
     #auth-error { color: var(--red); font-size: 0.85rem; display: none; }
 
@@ -93,6 +101,7 @@
     .login-card #config-form { width: 100%; }
     .login-card .auth-hint { text-align: center; }
     .login-card #config-status { text-align: center; }
+    .login-card #env-status { text-align: center; }
     .login-card #auth-error { text-align: center; }
 
     /* Google-branded sign-in button */
@@ -312,6 +321,7 @@
       <nav class="header-nav"><a href="./process.html" class="nav-link">&#x1F4C4; Process Transactions</a></nav>
   <p>Enter your credentials to connect your Google Sheet</p>
   <div id="config-form">
+    <div id="env-status">&#x2713; Env variables found &mdash; values pre-filled</div>
     <div id="config-status">&#x2713; config.json found &mdash; values pre-filled</div>
     <div class="field-group">
       <label for="client-id-input">OAuth Client ID</label>
@@ -335,7 +345,6 @@
     </div>
     <div id="auth-error"></div>
   </div>
-  <p class="auth-hint">Sheet ID is the string between <code>/d/</code> and <code>/edit</code> in your Sheet URL</p>
   </div>
 </div>
 
@@ -634,27 +643,36 @@ function setUserMenu(user) {
   document.addEventListener('click', closeMenu);
 })();
 
-// ─── CONFIG LOADING ───────────────────────────────────────────────────────────
-// Reads CLIENT_ID and SHEET_ID from config.json sitting next to this file.
-// config.json format:
-// {
-//   "clientId": "YOUR_CLIENT_ID.apps.googleusercontent.com",
-//   "sheetId":  "YOUR_GOOGLE_SHEET_ID"
-// }
-
-let CONFIG = {};
-
+// ─── CONFIG / ENV LOADING ──────────────────────────────────────────────────────
 async function loadConfig() {
-  try {
-    const res = await fetch('./config.json');
-    if (!res.ok) throw new Error('no config');
-    CONFIG = await res.json();
+  if (typeof window !== 'undefined' && window.ENV) {
+    const env = window.ENV;
+    const envClientId = env?.CLIENT_ID;
+    const envSheetId = env?.SHEET_ID_DATA;
+    
     let prefilled = false;
-    if (CONFIG.clientId) { document.getElementById('client-id-input').value = CONFIG.clientId; prefilled = true; }
-    if (CONFIG.sheetId)  { document.getElementById('sheet-id-input').value  = CONFIG.sheetId;  prefilled = true; }
-    if (prefilled) document.getElementById('config-status').style.display = 'block';
-  } catch {
-    // No config.json — boxes left blank for manual entry
+
+    try {
+      const res = await fetch('./config.json');
+      if (!res.ok) throw new Error('no config');
+      CONFIG = await res.json();
+      if (CONFIG.clientId) { document.getElementById('client-id-input').value = CONFIG.clientId; prefilled = true; }
+      if (CONFIG.sheetId)  { document.getElementById('sheet-id-input').value  = CONFIG.sheetId;  prefilled = true; }
+      if (prefilled) document.getElementById('config-status').style.display = 'block';
+      return;
+    } catch {
+      console.log("No pre-fillable config.json found.");
+    }
+
+    if (envClientId || envSheetId) {
+
+      if (envClientId !== '') { document.getElementById('client-id-input').value = envClientId; prefilled = true; }
+      if (envSheetId !== '') { document.getElementById('sheet-id-input').value = envSheetId; prefilled = true; }
+      if (prefilled) document.getElementById('env-status').style.display = 'block';
+      console.log("Pre-filled values from ENV variables.");
+      return;
+    }
+
   }
 }
 
