@@ -3,15 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spend Tracker</title>
+  <title>BBL</title>
   <link rel="icon" type="image/x-icon" href="./favicon.ico">
-  <script>
-    window.ENV = {
-      CLIENT_ID: "${CLIENT_ID}",
-      SHEET_ID_DATA: "${SHEET_ID_DATA}",
-      DOC_ID_CONFIG: "${DOC_ID_CONFIG}"
-    };
-  </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="./chart.umd.min.js"></script>
   <link rel="stylesheet" href="./styles.css">
@@ -21,13 +14,15 @@
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
   <div class="login-card">
-  <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
-  <h1 style="display: flex; flex-direction: column; align-items: center; gap: 0.5em;">
-    <img src="./favicon.ico" alt="💰" style="width: 2em; height: 2em;">
-    Spend Tracker
-  </h1>
-      <nav class="header-nav"><a href="./process.html" class="nav-link">&#x1F4C4; Process Transactions</a></nav>
-  <p>Enter your credentials to connect your Google Sheet</p>
+    <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+    <h1 style="display: flex; flex-direction: column; align-items: center; gap: 0.5em;">
+      <img src="./favicon.ico" alt="💰" style="width: 2em; height: 2em; cursor: pointer;" onclick="window.cycleText(this.nextElementSibling, ['Bangin\' Budget Ledger', 'Bad B**** Ledger', 'Broke B**** Ledger', 'BBL'])">
+      <span>Bangin' Budget Ledger</span>
+    </h1>
+    <nav class="header-nav">
+      <a href="./process.html" class="nav-link">&#x1F4C4; Process Transactions</a>
+    </nav>
+    <p>Enter your credentials to connect your Google Sheet</p>
   <div id="config-form">
     <div id="env-status">&#x2713; Env variables found &mdash; values pre-filled</div>
     <div id="config-status">&#x2713; config.json found &mdash; values pre-filled</div>
@@ -90,7 +85,7 @@
 <!-- MAIN APP -->
 <div id="app">
   <header>
-    <h1>&#x1F4B8; Spend Tracker</h1>
+    <h1><img src="./favicon.ico" alt="💰" style="width: 1.2em; height: 1.2em; vertical-align: middle; margin-right: 0.5em; cursor: pointer;" onclick="window.cycleText(this.nextElementSibling, ['Bangin\' Budget Ledger', 'Bad B**** Ledger', 'Broke B**** Ledger', 'BBL'])"><span>Bangin' Budget Ledger</span></h1>
     <div class="header-controls">
       <div class="multi-select-wrapper" id="year-wrapper">
         <div class="multi-select-trigger" id="year-trigger">All Years</div>

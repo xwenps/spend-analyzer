@@ -1,5 +1,11 @@
 import { initTheme } from './theme.js';
 
+window.cycleText = function(element, texts) {
+  const current = element.textContent.trim();
+  const index = texts.indexOf(current);
+  element.textContent = texts[(index + 1) % texts.length];
+};
+
 // ─── USER MENU ────────────────────────────────────────────────────────────────
 async function fetchUserProfile(token) {
   try {
@@ -630,6 +636,14 @@ function tickStyle() {
   const c = getChartThemeColors();
   return { color: c.tick, font: { size: 11 } };
 }
+
+// ─── RE-RENDER CHARTS ON THEME CHANGE ───────────────────────────────────────
+new MutationObserver(() => {
+  if (Object.keys(charts).length > 0) renderCharts();
+}).observe(document.documentElement, {
+  attributes: true,
+  attributeFilter: ['data-theme']
+});
 
 // ─── TABLE ────────────────────────────────────────────────────────────────────
 function renderTable() {

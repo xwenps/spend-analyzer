@@ -109,12 +109,7 @@ body {
   min-height: 100vh;
   gap: 24px;
   padding: 24px;
-  background:
-    radial-gradient(ellipse 80% 60% at 20% 10%,
-      color-mix(in oklch, var(--accent) 8%, transparent) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 90%,
-      color-mix(in oklch, var(--accent) 4%, transparent) 0%, transparent 55%),
-    var(--bg);
+  background: var(--bg);
 }
 
 /* ── Login Card ──────────────────────────────────────────────────────────────── */
