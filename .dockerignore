@@ -9,7 +9,7 @@
 .env.*.local
 .env.example
 Dockerfile-dev
-dev..sh
+dev.sh
 config.json
 
 # IDE

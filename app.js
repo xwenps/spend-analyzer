@@ -14,14 +14,15 @@ async function fetchUserProfile(token) {
     });
     if (!res.ok) return;
     const p = await res.json();
-    setUserMenu({
+    const user = {
       name:    p.name    || p.email || 'User',
       email:   p.email   || '',
       picture: p.picture || null,
-    });
-    console.log(p.name, p.email)
-  } catch (e) {
-    console.log("Fail to get user info.")
+    };
+    sessionStorage.setItem('gapi_user_profile', JSON.stringify(user)); // ← cache it
+    setUserMenu(user);
+  } catch(e) {
+    console.log('Failed to get user info.');
   }
 }
 
@@ -37,9 +38,9 @@ function setUserMenu(user) {
     const src = user.picture.replace(/=s\d+-c$/, '=s56-c');
 
     const img = document.createElement('img');
-    img.src              = src;
     img.alt              = user.name;
     img.crossOrigin      = 'anonymous'; // avoids taint issues
+    img.src              = src;
     img.style.width      = '100%';
     img.style.height     = '100%';
     img.style.objectFit  = 'cover';
@@ -126,6 +127,25 @@ const PALETTE = [
 window.addEventListener('load', async () => {
   initTheme();
   await loadConfig();
+
+  // ── Restore existing session ──────────────────────────────────
+  const savedToken   = sessionStorage.getItem('gapi_access_token');
+  const savedSheetId = sessionStorage.getItem('gapi_sheet_id');
+  if (savedToken && savedSheetId) {
+    accessToken = savedToken;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('loading').style.display   = 'block';
+    const cachedProfile = sessionStorage.getItem('gapi_user_profile');
+    if (cachedProfile) {
+      setUserMenu(JSON.parse(cachedProfile));
+    } else {
+      await fetchUserProfile(savedToken);
+    }
+    await loadAllData(savedSheetId);
+    return; 
+  }
+
+  // ── No session — show sign-in as normal ───────────────────────
   document.getElementById('signin-btn').addEventListener('click', startSignIn);
   // Demo Mode button wiring
   const demoBtn = document.getElementById('demo-mode-btn');
@@ -202,6 +222,8 @@ function startSignIn() {
     callback: async (resp) => {
       if (resp.error) { showAuthError('Sign-in failed: ' + resp.error); return; }
       accessToken = resp.access_token;
+      sessionStorage.setItem('gapi_access_token', resp.access_token);
+      sessionStorage.setItem('gapi_sheet_id', sheetId);
       fetchUserProfile(accessToken);
       await loadAllData(sheetId);
     }
@@ -218,10 +240,21 @@ function showAuthError(msg) {
 // ─── DATA FETCHING ────────────────────────────────────────────────────────────
 async function discoverSheetTabs(sheetId) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  });
+  const res  = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+
+  if (!res.ok) {
+    // Token likely expired — clear session and force re-login
+    if (res.status === 401) {
+      sessionStorage.removeItem('gapi_access_token');
+      sessionStorage.removeItem('gapi_sheet_id');
+      sessionStorage.removeItem('gapi_user_profile');
+      location.reload();
+    }
+    throw new Error(`Sheet API error: ${res.status}`);
+  }
+
   const json = await res.json();
+  if (!json.sheets) throw new Error('No sheets found in response');
   return json.sheets.map(s => s.properties.title);
 }
 
@@ -707,7 +740,10 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
 });
 
 document.getElementById('signout-btn').addEventListener('click', () => {
-  google.accounts.oauth2.revoke(accessToken, () => { location.reload(); });
+  sessionStorage.removeItem('gapi_access_token');
+  sessionStorage.removeItem('gapi_sheet_id');
+  sessionStorage.removeItem('gapi_user_profile');
+  location.reload();
 });
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
