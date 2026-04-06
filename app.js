@@ -89,25 +89,19 @@ async function loadConfig() {
     if (CONFIG.clientId) { document.getElementById('client-id-input').value = CONFIG.clientId; prefilled = true; }
     if (CONFIG.sheetId)  { document.getElementById('sheet-id-input').value  = CONFIG.sheetId;  prefilled = true; }
     if (prefilled) document.getElementById('config-status').style.display = 'block';
-    return;
   } catch {
     console.log("No pre-fillable config.json found.");
   }
 
-  if (typeof window !== 'undefined' && window.ENV) {
+  if (!prefilled && typeof window !== 'undefined' && window.ENV) {
     const env = window.ENV;
-    const envClientId = env?.CLIENT_ID;
-    const envSheetId = env?.SHEET_ID_DATA;
+    if (env?.CLIENT_ID)   { document.getElementById('client-id-input').value = env.CLIENT_ID;   prefilled = true; }
+    if (env?.SHEET_ID_DATA) { document.getElementById('sheet-id-input').value = env.SHEET_ID_DATA; prefilled = true; }
+    if (prefilled) { document.getElementById('env-status').style.display = 'block'; console.log("Pre-filled from ENV."); }
+  }
 
-    if (envClientId || envSheetId) {
-
-      if (envClientId !== '') { document.getElementById('client-id-input').value = envClientId; prefilled = true; }
-      if (envSheetId !== '') { document.getElementById('sheet-id-input').value = envSheetId; prefilled = true; }
-      if (prefilled) document.getElementById('env-status').style.display = 'block';
-      console.log("Pre-filled values from ENV variables.");
-      return;
-    }
-
+  if (!prefilled) {
+    document.getElementById('manual-settings-panel').classList.add('open');
   }
 }
 
@@ -159,6 +153,14 @@ window.addEventListener('load', async () => {
     demoOverlay.style.display = 'none';
     await loadPublicData(sid, gids);
   });
+  const settingsToggle = document.getElementById('manual-settings-toggle');
+  const settingsPanel  = document.getElementById('manual-settings-panel');
+  if (settingsToggle) {
+    settingsToggle.addEventListener('click', () => {
+      const isOpen = settingsPanel.classList.toggle('open');
+      settingsToggle.textContent = isOpen ? '✕ hide setup' : '⚙ manual setup';
+    });
+  }
   initAllMultiSelects();
   document.getElementById('cat-type-btn').addEventListener('click', () => {
     document.getElementById('cat-type-overlay').style.display = 'flex';
