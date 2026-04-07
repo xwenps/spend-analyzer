@@ -119,6 +119,7 @@ let charts = {};
 let categoryMap = {};
 let subcategoryMap = {}; 
 let activeDrillCategory = null;
+let selectedTags = new Set();
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const PALETTE = [
@@ -427,17 +428,16 @@ function populateFilters() {
   renderCategoryTypeModal(cats);
 }
 
-function getFilters() { return {}; }
-
 function applyFiltersAndRender() {
+  const savedScrollY = window.scrollY;
   filteredData = allData.filter(r => {
     if (excluded.year.size  > 0 && excluded.year.has(String(r.year)))      return false;
     if (excluded.month.size > 0 && excluded.month.has(String(r.monthNum))) return false;
     if (excluded.owner.size > 0 && excluded.owner.has(r.accountOwner))     return false;
     if (excluded.cat.size   > 0 && excluded.cat.has(r.category))           return false;
-    // Tags: row passes if it has no tags, OR at least one tag is not excluded
-    if (excluded.tag.size > 0 && r.tags.length > 0) {
-      if (!r.tags.some(t => !excluded.tag.has(t))) return false;
+    // Tags: AND inclusion — row must contain every selected tag
+    if (selectedTags.size > 0) {
+      if (![...selectedTags].every(t => (r.tags || []).includes(t))) return false;
     }
     return true;
   });
@@ -446,7 +446,10 @@ function applyFiltersAndRender() {
   updateChartTitles();
   renderCharts();
   renderTable();
-  if (activeDrillCategory) renderSubcategoryDrill(activeDrillCategory);
+  if (activeDrillCategory) renderSubcategoryDrill(activeDrillCategory, false);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+  }));
 }
 
 // ─── DEMO / PUBLIC SHEETS LOADING ───────────────────────────────────────────
@@ -741,12 +744,12 @@ function renderCategoryBar() {
   });
 }
 
-function renderSubcategoryDrill(categoryName) {
+function renderSubcategoryDrill(categoryName, scrollToCard = true) {
   activeDrillCategory = categoryName;
   const card = document.getElementById('subcategory-drill-card');
   document.getElementById('drill-title').textContent = `${categoryName} — Subcategory Breakdown`;
   card.style.display = 'block';
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (scrollToCard) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   destroyChart('subDrill');
   const rows    = filteredData.filter(r => r.category === categoryName);
@@ -936,7 +939,7 @@ function renderCategoryTypeModal(cats) {
 }
 
 // ─── UNIFIED MULTI-SELECT ENGINE ─────────────────────────────────────────────
-const excluded = { year: new Set(), month: new Set(), owner: new Set(), cat: new Set(), tag: new Set() };
+const excluded = { year: new Set(), month: new Set(), owner: new Set(), cat: new Set() };
 const MS_CONFIG = {
   year:  { label: 'All Years',      singular: 'Year'     },
   month: { label: 'All Months',     singular: 'Month'    },
@@ -965,15 +968,17 @@ function initAllMultiSelects() {
   });
 
   document.querySelectorAll('.ms-action-btn[data-ms]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', e => {
       e.stopPropagation();
       const key = btn.dataset.ms, action = btn.dataset.action;
-      const cbs = document.querySelectorAll('#' + key + '-options .ms-option input');
-      if (action === 'all') {
-        excluded[key].clear();
-        cbs.forEach(cb => cb.checked = true);
+      const cbs = document.querySelectorAll(`#${key}-options .ms-option input`);
+      if (key === 'tag') {
+        selectedTags.clear();
+        if (action === 'all') cbs.forEach(cb => { cb.checked = true;  selectedTags.add(cb.value); });
+        else                  cbs.forEach(cb => { cb.checked = false; });
       } else {
-        cbs.forEach(cb => { cb.checked = false; excluded[key].add(cb.value); });
+        if (action === 'all') { excluded[key].clear(); cbs.forEach(cb => cb.checked = true); }
+        else { cbs.forEach(cb => { cb.checked = false; excluded[key].add(cb.value); }); }
       }
       updateMSTrigger(key);
       applyFiltersAndRender();
@@ -1001,22 +1006,30 @@ function filterMSSearch(key) {
 }
 
 function populateMSOptions(key, items) {
-  const container = document.getElementById(key + '-options');
+  const container = document.getElementById(`${key}-options`);
   container.innerHTML = '';
-  excluded[key].clear();
+  if (key === 'tag') selectedTags.clear();
+  else excluded[key]?.clear();
+
   items.forEach(({ value, label }) => {
     const div = document.createElement('div');
     div.className = 'ms-option';
     div.dataset.label = label;
-    const safeId  = key + '_' + value.replace(/[^a-zA-Z0-9]/g, '_');
+    const safeId  = `${key}_${value.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const safeVal = value.replace(/"/g, '&quot;');
     const safeLbl = label.replace(/</g, '&lt;');
-    div.innerHTML = '<input type="checkbox" id="' + safeId + '" value="' + safeVal + '" checked>' +
-                    '<label for="' + safeId + '">' + safeLbl + '</label>';
-    div.addEventListener('click', (e) => e.stopPropagation());
-    div.querySelector('input').addEventListener('change', (e) => {
-      if (e.target.checked) excluded[key].delete(value);
-      else excluded[key].add(value);
+
+    const checked = key === 'tag' ? '' : 'checked';
+    div.innerHTML = `<input type="checkbox" id="${safeId}" value="${safeVal}" ${checked}> <label for="${safeId}">${safeLbl}</label>`;
+    div.addEventListener('click', e => e.stopPropagation());
+    div.querySelector('input').addEventListener('change', e => {
+      if (key === 'tag') {
+        if (e.target.checked) selectedTags.add(value);
+        else selectedTags.delete(value);
+      } else {
+        if (e.target.checked) excluded[key].delete(value);
+        else excluded[key].add(value);
+      }
       updateMSTrigger(key);
       applyFiltersAndRender();
     });
@@ -1026,15 +1039,21 @@ function populateMSOptions(key, items) {
 }
 
 function updateMSTrigger(key) {
-  const trigger = document.getElementById(key + '-trigger');
-  const total   = document.querySelectorAll('#' + key + '-options .ms-option input').length;
-  const checked = document.querySelectorAll('#' + key + '-options .ms-option input:checked').length;
+  const trigger = document.getElementById(`${key}-trigger`);
   const cfg = MS_CONFIG[key];
-  if (total === 0 || checked === total) {
-    trigger.textContent = cfg.label;
-  } else if (checked === 0) {
-    trigger.textContent = 'No ' + cfg.singular + 's';
-  } else {
-    trigger.innerHTML = cfg.singular + 's <span class="ms-badge">' + checked + ' / ' + total + '</span>';
+
+  if (key === 'tag') {
+    if (selectedTags.size === 0) {
+      trigger.textContent = cfg.label;
+    } else {
+      trigger.innerHTML = `${cfg.singular}s <span class="ms-badge">${selectedTags.size}</span>`;
+    }
+    return;
   }
+
+  const total   = document.querySelectorAll(`#${key}-options .ms-option input`).length;
+  const checked = document.querySelectorAll(`#${key}-options .ms-option input:checked`).length;
+  if (total === 0 || checked === total) trigger.textContent = cfg.label;
+  else if (checked === 0) trigger.textContent = `No ${cfg.singular}s`;
+  else trigger.innerHTML = `${cfg.singular}s <span class="ms-badge">${checked}/${total}</span>`;
 }
