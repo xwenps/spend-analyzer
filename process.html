@@ -477,7 +477,7 @@
           <tr>
             <th>#</th><th>Date</th><th>Description</th>
             <th style="text-align:right">Amount</th>
-            <th>Account</th><th>Category</th><th>Subcategory</th><th>Tags</th><th>Owner</th><th></th>
+            <th>Category</th><th>Subcategory</th><th>Tags</th><th>Notes</th><th>Account</th><th>Owner</th><th></th>
           </tr>
         </thead>
         <tbody id="preview-tbody"></tbody>
@@ -758,7 +758,6 @@ function renderPreview(rows) {
       <td class="date-cell">${esc(r.date)}</td>
       <td><span contenteditable="true" data-field="description" data-idx="${i}">${esc(r.description)}</span></td>
       <td class="amount-cell"><span contenteditable="true" data-field="amount" data-idx="${i}">${r.amount.toFixed(2)}</span></td>
-      <td><span contenteditable="true" data-field="account" data-idx="${i}">${esc(r.account)}</span></td>
     `;
     tr.append(staticFrag.content);
 
@@ -775,8 +774,20 @@ function renderPreview(rows) {
     // Tags cell (comma-separated, free text)
     const tagsTd = document.createElement('td');
     tagsTd.className = 'tags-cell';
-    tagsTd.innerHTML = `<span contenteditable="true" data-field="tags" data-idx="${i}" data-placeholder="#tags (comma-separated)">${esc(r.tags || '')}</span>`;
+    tagsTd.innerHTML = `<span contenteditable="true" data-field="tags" data-idx="${i}" data-placeholder="comma-delim">${esc(r.tags || '')}</span>`;
     tr.appendChild(tagsTd);
+
+    // Notes
+    const notesTd = document.createElement('td');
+    notesTd.className = 'tags-cell';
+    notesTd.innerHTML = `<span contenteditable="true" data-field="notes" data-idx="${i}">${esc(r.notes)}</span>`;
+    tr.appendChild(notesTd);
+
+    // Account
+    // Account cell (now after notes)
+    const accountTd = document.createElement('td');
+    accountTd.innerHTML = `<span contenteditable="true" data-field="account" data-idx="${i}">${esc(r.account)}</span>`;
+    tr.appendChild(accountTd);
 
     // Owner
     const ownerTd = document.createElement('td');
@@ -819,18 +830,18 @@ function updateSummary() {
   netEl.className = 'stat-value ' + (net >= 0 ? 'positive' : 'negative');
 }
 
-const OUTPUT_HEADERS = ['Date','Description','Amount','Account','Category','Subcategory','Tags','Account Owner'];
+const OUTPUTHEADERS = ['date','description','amount','categoryid','subcategoryid','tags','notes','account','accountowner'];
 
 function rowsToTSV(rows, includeHeader=true) {
   const lines = includeHeader ? [OUTPUT_HEADERS.join('\t')] : [];
-  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.subcategory||'',r.tags||'',r.accountOwner].map(v=>String(v).replace(/\t/g,' ')).join('\t')));
+  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.category,r.subcategory||'',r.tags||'',r.notes||'',r.account,r.accountOwner].map(v=>String(v).replace(/\t/g,' ')).join('\t')));
   return lines.join('\n');
 }
 
 function rowsToCSV(rows, includeHeader=true) {
   const q = v => { const s=String(v); return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s; };
   const lines = includeHeader ? [OUTPUT_HEADERS.map(q).join(',')] : [];
-  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.account,r.category,r.subcategory||'',r.tags||'',r.accountOwner].map(q).join(',')));
+  rows.forEach(r => lines.push([r.date,r.description,r.amount.toFixed(2),r.category,r.subcategory||'',r.tags||'',r.notes||'',r.account,r.accountOwner].map(q).join(',')));
   return lines.join('\n');
 }
 
@@ -984,7 +995,7 @@ function parseAccountRows(rows) {
     owner:       (r[col('owner')]        || '').trim(),
     type:        (r[col('type')]         || '').trim(),
     description: (r[col('description')]  || '').trim(),
-  })).filter(a => a.name);
+  })).filter(a => a.name).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function parseCategoryRows(rows) {
@@ -1002,7 +1013,12 @@ function parseCategoryRows(rows) {
     if (!map.has(catId)) map.set(catId, { id: catId, name: catName, subcategories: [] });
     if (subId && subName) map.get(catId).subcategories.push({ id: subId, name: subName });
   });
-  return [...map.values()];
+  return Array.from(map.values())
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(cat => ({
+      ...cat,
+      subcategories: cat.subcategories.sort((a, b) => a.name.localeCompare(b.name))
+    }));
 }
 
 async function tryLoadFromConfigJson() {
