@@ -602,7 +602,11 @@ function renderKPIs() {
 let chartFreq = 'monthly';
 function getFreqKey(row) {
   if (!row.year || !row.monthNum) return null;
-  if (chartFreq === 'yearly')    return String(row.year);
+  if (chartFreq === 'daily') {
+    if (!row.dateObj) return null;
+    return `${row.year}-${String(row.monthNum).padStart(2,'0')}-${String(row.dateObj.getDate()).padStart(2,'0')}`;
+  }
+  if (chartFreq === 'yearly')   return String(row.year);
   if (chartFreq === 'quarterly') return `${row.year}-Q${Math.ceil(row.monthNum / 3)}`;
   return `${row.year}-${String(row.monthNum).padStart(2, '0')}`;
 }
@@ -610,14 +614,19 @@ function getFreqKey(row) {
 function freqKeyLabel(key) {
   if (chartFreq === 'yearly')    return key;
   if (chartFreq === 'quarterly') return key.replace('-', ' ');  // "2024 Q2"
+  if (chartFreq === 'daily') {
+    const [y, m, d] = key.split('-');
+    return `${MONTHS[parseInt(m) - 1]} ${parseInt(d)} '${y.slice(2)}`; // e.g. "Jan 3 '24"
+  }
   const [y, m] = key.split('-');
   return `${MONTHS[parseInt(m) - 1]} ${y.slice(2)}`;           // "Jan 24"
 }
 
 const CHART_TITLES = {
-  monthly:   { trend: 'Monthly Net Trend',      exptrend: 'Monthly Expense Trend',   inctrend: 'Monthly Income Trend',   catmonth: 'Month-over-Month Expenses' },
-  quarterly: { trend: 'Quarterly Net Trend',    exptrend: 'Quarterly Expense Trend', inctrend: 'Quarterly Income Trend', catmonth: 'Quarter-over-Quarter Expenses' },
-  yearly:    { trend: 'Yearly Net Trend',        exptrend: 'Yearly Expense Trend',    inctrend: 'Yearly Income Trend',    catmonth: 'Year-over-Year Expenses' },
+  daily:     { trend: 'Daily Net Trend',       exptrend: 'Daily Expense Trend',       inctrend: 'Daily Income Trend',       catmonth: 'Day-over-Day Expenses'         },
+  monthly:   { trend: 'Monthly Net Trend',     exptrend: 'Monthly Expense Trend',     inctrend: 'Monthly Income Trend',     catmonth: 'Month-over-Month Expenses'     },
+  quarterly: { trend: 'Quarterly Net Trend',   exptrend: 'Quarterly Expense Trend',   inctrend: 'Quarterly Income Trend',   catmonth: 'Quarter-over-Quarter Expenses' },
+  yearly:    { trend: 'Yearly Net Trend',      exptrend: 'Yearly Expense Trend',      inctrend: 'Yearly Income Trend',      catmonth: 'Year-over-Year Expenses'       },
 };
 
 function updateChartTitles() {
